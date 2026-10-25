@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticketing-service
+  namespace: cine-system
+  labels:
+    app: ticketing-service
+    version: "1.0.0"
+    component: ticketing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ticketing-service
+  template:
+    metadata:
+      labels:
+        app: ticketing-service
+        version: "1.0.0"
+        component: ticketing
+    spec:
+      containers:
+        - name: ticketing-service
+          image: ticketing-service:1.0.0
+          # IfNotPresent es requerido para imágenes locales de Minikube
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8082
+              protocol: TCP
+
+          # Variables de entorno configuradas desde el manifiesto
+          env:
+            - name: SERVER_PORT
+              value: "8082"
+            - name: CATALOG_SERVICE_URL
+              value: "http://movie-catalog-service.cine-system.svc.cluster.local:8081"
+            - name: CATALOG_TIMEOUT_MS
+              value: "2000"
+            - name: SPRING_APPLICATION_NAME
+              value: "ticketing-service"
+
+          # Liveness Probe
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+
+          # Readiness Probe
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+
+          # Límites y solicitudes de recursos
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

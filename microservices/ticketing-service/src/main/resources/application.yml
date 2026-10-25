@@ -1,0 +1,49 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: ticketing-service
+
+# ============================================================
+# Configuración del cliente HTTP hacia movie-catalog-service
+# ============================================================
+catalog:
+  service:
+    url: ${CATALOG_SERVICE_URL:http://movie-catalog-service:8081}
+    timeout-ms: ${CATALOG_TIMEOUT_MS:2000}
+
+# ============================================================
+# Spring Boot Actuator
+# ============================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ticketing-service
+      environment: kubernetes
+
+# ============================================================
+# Logging
+# ============================================================
+logging:
+  level:
+    com.cinesystem: INFO
+    org.springframework.web: WARN
+    org.springframework.web.reactive: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

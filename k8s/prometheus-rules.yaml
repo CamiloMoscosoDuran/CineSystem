@@ -1,0 +1,125 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cine-system-alerts
+  namespace: cine-system
+  labels:
+    # Debe coincidir con el ruleSelector del chart kube-prometheus-stack
+    release: monitoring
+    app: cine-system-alerts
+spec:
+  groups:
+    - name: cine-system.service-availability
+      interval: 30s
+      rules:
+        # ================================================================
+        # ALERTA 1: Servicio de Catálogo caído
+        # Dispara si movie-catalog-service está DOWN por más de 1 minuto
+        # ================================================================
+        - alert: MovieCatalogServiceDown
+          expr: up{job="catalog-service"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            service: movie-catalog-service
+            team: cine-system
+          annotations:
+            summary: "🔴 movie-catalog-service está CAÍDO"
+            description: >
+              El servicio de catálogo de películas (movie-catalog-service) no responde
+              a los health checks de Prometheus. El namespace es '{{ $labels.namespace }}'.
+              Los usuarios no pueden consultar la cartelera ni realizar reservas.
+              Acción: kubectl rollout restart deployment/movie-catalog-service -n cine-system
+
+        # ================================================================
+        # ALERTA 2: Servicio de Boletería caído
+        # Dispara si ticketing-service está DOWN por más de 1 minuto
+        # ================================================================
+        - alert: TicketingServiceDown
+          expr: up{job="ticketing-service"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            service: ticketing-service
+            team: cine-system
+          annotations:
+            summary: "🔴 ticketing-service está CAÍDO"
+            description: >
+              El servicio de boletería (ticketing-service) no responde a los health checks.
+              Los usuarios no pueden comprar ni cancelar boletos.
+              Namespace: '{{ $labels.namespace }}'.
+              Acción: kubectl rollout restart deployment/ticketing-service -n cine-system
+
+    - name: cine-system.business-alerts
+      interval: 30s
+      rules:
+        # ================================================================
+        # ALERTA 3: Alta tasa de fallos en ventas (situación de negocio)
+        # Dispara si más del 15% de compras fallan en los últimos 2 minutos
+        # ================================================================
+        - alert: HighCheckoutFailureRate
+          expr: >
+            rate(ticketing_purchase_failures_total[2m])
+            /
+            (rate(ticketing_tickets_sold_total[2m]) + rate(ticketing_purchase_failures_total[2m]) + 0.001)
+            > 0.15
+          for: 2m
+          labels:
+            severity: warning
+            service: ticketing-service
+            team: cine-system
+            type: business
+          annotations:
+            summary: "🟡 Alta tasa de fallos en venta de boletos (>15%)"
+            description: >
+              La tasa de fallos en el proceso de compra de boletos supera el 15%.
+              Valor actual: {{ $value | humanizePercentage }}.
+              Posibles causas: movie-catalog-service lento/caído, agotamiento de asientos,
+              o carga excesiva. Revisar logs de ticketing-service.
+
+        # ================================================================
+        # ALERTA 4: Agotamiento de asientos (negocio - Casuística 3)
+        # Dispara si los asientos totales disponibles en toda la cartelera
+        # caen por debajo de 50 (umbral de ocupación crítica)
+        # ================================================================
+        - alert: CinemaSoldOutAlert
+          expr: catalog_available_seats_total{service="movie-catalog-service"} < 50
+          for: 1m
+          labels:
+            severity: warning
+            service: movie-catalog-service
+            team: cine-system
+            type: business
+          annotations:
+            summary: "🟠 Cartelera casi sin disponibilidad de asientos"
+            description: >
+              El total de asientos disponibles en toda la cartelera activa es
+              {{ $value }}, que está por debajo del umbral crítico de 50 asientos.
+              Las próximas ventas masivas serán rechazadas con error 409 Conflict.
+              Considerar abrir nuevas funciones o incrementar aforo.
+
+    - name: cine-system.latency-alerts
+      interval: 30s
+      rules:
+        # ================================================================
+        # ALERTA 5: Latencia alta en el catálogo (Casuística 2)
+        # Dispara si el p95 de latencia del catálogo supera 1.5 segundos
+        # ================================================================
+        - alert: CatalogHighLatency
+          expr: >
+            histogram_quantile(0.95,
+              rate(catalog_response_time_seconds_bucket[5m])
+            ) > 1.5
+          for: 2m
+          labels:
+            severity: warning
+            service: movie-catalog-service
+            team: cine-system
+            type: performance
+          annotations:
+            summary: "🟡 Latencia alta en movie-catalog-service (p95 > 1.5s)"
+            description: >
+              El percentil 95 de latencia del catálogo de películas es
+              {{ $value | humanizeDuration }}, superando el SLA de 1.5 segundos.
+              Esto puede estar causando timeouts en ticketing-service.
+              Verificar si ARTIFICIAL_DELAY_MS está configurado en el pod.

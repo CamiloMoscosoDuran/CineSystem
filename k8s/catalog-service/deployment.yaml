@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movie-catalog-service
+  namespace: cine-system
+  labels:
+    app: movie-catalog-service
+    version: "1.0.0"
+    component: catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: movie-catalog-service
+  template:
+    metadata:
+      labels:
+        app: movie-catalog-service
+        version: "1.0.0"
+        component: catalog
+    spec:
+      containers:
+        - name: movie-catalog-service
+          image: movie-catalog-service:1.0.0
+          # IfNotPresent es requerido para imágenes locales de Minikube
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+
+          # Variables de entorno configuradas desde el manifiesto
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+            - name: ARTIFICIAL_DELAY_MS
+              value: "0"
+            - name: SPRING_APPLICATION_NAME
+              value: "movie-catalog-service"
+
+          # Liveness Probe: detecta si el pod está muerto y debe reiniciarse
+          # Apunta al health check nativo y liviano de Spring Actuator
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+
+          # Readiness Probe: detecta si el pod está listo para recibir tráfico
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+
+          # Límites y solicitudes de recursos
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

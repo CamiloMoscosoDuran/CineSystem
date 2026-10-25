@@ -1,0 +1,44 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: movie-catalog-service
+
+# ============================================================
+# Spring Boot Actuator
+# Exponemos prometheus en /metrics (requerimiento del enunciado)
+# ============================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+      base-path: /actuator
+      path-mapping:
+        # Mapear /actuator/prometheus -> accesible también como /metrics
+        prometheus: prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: movie-catalog-service
+      environment: kubernetes
+
+# ============================================================
+# Logging
+# ============================================================
+logging:
+  level:
+    com.cinesystem: INFO
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

@@ -1,0 +1,115 @@
+# values-prom-stack.yaml
+# Configuración del chart kube-prometheus-stack para el proyecto CineSystem
+# Repositorio: prometheus-community/kube-prometheus-stack
+#
+# Instalar con:
+#   helm install monitoring prometheus-community/kube-prometheus-stack \
+#     -n monitoring --create-namespace \
+#     -f k8s/values-prom-stack.yaml
+
+# ============================================================
+# GRAFANA
+# ============================================================
+grafana:
+  # Contraseña personalizada de Grafana
+  adminPassword: "CineSystem2024!"
+
+  # Exponer Grafana como NodePort para acceso desde el navegador
+  service:
+    type: NodePort
+    nodePort: 32000
+
+  # Configuración por defecto
+  defaultDashboardsEnabled: true
+  defaultDashboardsTimezone: "America/Lima"
+
+  # Plugins adicionales
+  plugins:
+    - grafana-piechart-panel
+
+# ============================================================
+# PROMETHEUS
+# ============================================================
+prometheus:
+  service:
+    type: NodePort
+    nodePort: 32001
+
+  prometheusSpec:
+    # CRÍTICO: Esta configuración hace que Prometheus detecte
+    # ServiceMonitors en TODOS los namespaces (no solo monitoring).
+    # Sin esto, los ServiceMonitors de cine-system serían ignorados.
+    serviceMonitorSelectorNilUsesHelmValues: false
+
+    # Seleccionar ServiceMonitors de cualquier namespace
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+
+    # Seleccionar PrometheusRules de cualquier namespace
+    ruleSelector: {}
+    ruleNamespaceSelector: {}
+
+    # Retención de datos
+    retention: 15d
+
+    # Recursos para Prometheus
+    resources:
+      requests:
+        memory: "400Mi"
+        cpu: "200m"
+      limits:
+        memory: "800Mi"
+        cpu: "500m"
+
+# ============================================================
+# ALERTMANAGER
+# ============================================================
+alertmanager:
+  service:
+    type: NodePort
+    nodePort: 32002
+
+  alertmanagerSpec:
+    resources:
+      requests:
+        memory: "100Mi"
+        cpu: "50m"
+      limits:
+        memory: "200Mi"
+        cpu: "100m"
+
+# ============================================================
+# PROMETHEUS OPERATOR
+# ============================================================
+prometheusOperator:
+  resources:
+    requests:
+      memory: "100Mi"
+      cpu: "50m"
+    limits:
+      memory: "200Mi"
+      cpu: "100m"
+
+# ============================================================
+# KUBE STATE METRICS
+# ============================================================
+kube-state-metrics:
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "25m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+# ============================================================
+# NODE EXPORTER
+# ============================================================
+nodeExporter:
+  resources:
+    requests:
+      memory: "32Mi"
+      cpu: "10m"
+    limits:
+      memory: "64Mi"
+      cpu: "50m"

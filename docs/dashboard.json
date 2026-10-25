@@ -1,0 +1,247 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
+  ],
+  "annotations": { "list": [] },
+  "description": "Dashboard de monitoreo para el sistema CineSystem - Microservicios de Catálogo y Boletería",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "🎬 Estado movie-catalog-service",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } }, "type": "value" }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "up{job=\"movie-catalog-service\"}",
+          "legendFormat": "Catalog Service",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "🎟️ Estado ticketing-service",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } }, "type": "value" }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "up{job=\"ticketing-service\"}",
+          "legendFormat": "Ticketing Service",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "💺 Asientos Disponibles en Cartelera",
+      "description": "Total de asientos disponibles en todas las funciones activas",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 50 },
+              { "color": "yellow", "value": 200 },
+              { "color": "green", "value": 500 }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "catalog_available_seats_total{service=\"movie-catalog-service\"}",
+          "legendFormat": "Asientos disponibles",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "🎫 Reservas Activas",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "ticketing_active_reservations_gauge{service=\"ticketing-service\"}",
+          "legendFormat": "Reservas activas",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "📊 Tasa de Requests por Segundo",
+      "description": "Rate de requests HTTP a ambos servicios en tiempo real",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "expr": "rate(catalog_movies_requested_total{service=\"movie-catalog-service\"}[2m])",
+          "legendFormat": "Catalog - Consultas",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(ticketing_tickets_sold_total{service=\"ticketing-service\"}[2m])",
+          "legendFormat": "Ticketing - Ventas exitosas",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(ticketing_purchase_failures_total{service=\"ticketing-service\"}[2m])",
+          "legendFormat": "Ticketing - Fallos de compra",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "⏱️ Latencia del Checkout (percentiles)",
+      "description": "Tiempo de procesamiento del checkout completo en ticketing-service (incluye llamada al catalog-service)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "lineWidth": 2, "fillOpacity": 5 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 2 }]
+          }
+        }
+      },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "expr": "ticketing_checkout_duration_seconds{quantile=\"0.5\"}",
+          "legendFormat": "p50 (mediana)",
+          "refId": "A"
+        },
+        {
+          "expr": "ticketing_checkout_duration_seconds{quantile=\"0.95\"}",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "ticketing_checkout_duration_seconds{quantile=\"0.99\"}",
+          "legendFormat": "p99",
+          "refId": "C"
+        },
+        {
+          "expr": "ticketing_checkout_duration_seconds_max",
+          "legendFormat": "Max",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "🔥 Delay Artificial en Catalog Service",
+      "description": "Gauge del delay artificial configurado (ms). Sube durante Casuística 2.",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 12 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "lineWidth": 2, "fillOpacity": 20 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1000 }, { "color": "red", "value": 2000 }]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "catalog_artificial_delay_milliseconds{service=\"movie-catalog-service\"}",
+          "legendFormat": "Delay artificial (ms)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "💰 Panel de Negocio: Ingresos y Ventas",
+      "description": "Ingresos acumulados del día y tasa de conversión de ventas",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 12 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "expr": "ticketing_tickets_sold_total{service=\"ticketing-service\"}",
+          "legendFormat": "Total boletos vendidos",
+          "refId": "A"
+        },
+        {
+          "expr": "ticketing_cancellations_total{service=\"ticketing-service\"}",
+          "legendFormat": "Total cancelaciones",
+          "refId": "B"
+        },
+        {
+          "expr": "ticketing_purchase_failures_total{service=\"ticketing-service\"}",
+          "legendFormat": "Total fallos de compra",
+          "refId": "C"
+        }
+      ]
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 38,
+  "tags": ["cine-system", "microservices", "kubernetes"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "CineSystem — Monitoreo Completo",
+  "uid": "cine-system-dashboard",
+  "version": 1
+}

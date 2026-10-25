@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ticketing-service-monitor
+  namespace: cine-system
+  labels:
+    # El selector del PrometheusSpec busca ServiceMonitors con estos labels
+    app: ticketing-service
+    release: monitoring
+spec:
+  # El selector debe coincidir exactamente con los labels del Service de Kubernetes
+  selector:
+    matchLabels:
+      app: ticketing-service
+      monitoring: "true"
+
+  # Monitorear en el namespace cine-system
+  namespaceSelector:
+    matchNames:
+      - cine-system
+
+  endpoints:
+    - port: http           # Nombre del puerto en el Service (DEBE ser "http")
+      path: /metrics       # Ruta donde están las métricas de Prometheus
+      interval: 15s        # Frecuencia de scraping
+      scrapeTimeout: 10s
